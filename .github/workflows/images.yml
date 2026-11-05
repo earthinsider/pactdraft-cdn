@@ -1,0 +1,50 @@
+name: Process images and deploy
+on:
+  push:
+    branches: [main]
+    paths: ['incoming/**', 'img/**', 'index.html', 'robots.txt', 'CNAME']
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet pillow
+      - name: Make variants
+        run: python scripts/make_variants.py
+      - name: Commit generated images
+        run: |
+          git config user.name "pactdraft-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A img incoming
+          if git diff --cached --quiet; then echo "nothing to commit"; else
+            git commit -m "images: $(tr '\n' ' ' < .out/ids.txt | cut -c1-200)"
+            git push
+          fi
+      - name: Size report
+        run: python scripts/size_report.py
+      - name: Prepare site folder
+        run: |
+          mkdir _site
+          cp -r img index.html robots.txt .nojekyll _site/
+          if [ -f CNAME ]; then cp CNAME _site/; fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        
