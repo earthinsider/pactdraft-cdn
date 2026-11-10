@@ -18,13 +18,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check files and size
         run: |
-          mkdir -p image
-          for f in image/*; do
-            [ -e "$f" ] || continue
-            n=$(basename "$f")
-            if ! echo "$n" | grep -Eq '^[a-z0-9][a-z0-9-]*\.webp$'; then echo "::warning::unexpected file name $n (use <article-slug>.webp)"; fi
-            s=$(stat -c %s "$f")
-            if [ "$s" -gt 153600 ]; then echo "::warning::$n is $((s / 1024)) KB (over 150 KB)"; fi
+          mkdir -p image/feature image/card
+          for f in image/*.*; do
+            [ -f "$f" ] || continue
+            b=$(basename "$f"); [ "$b" = "README.txt" ] && continue
+            n="${b%.*}"
+            echo "$b" | grep -Eq '^[a-z0-9][a-z0-9-]*\.(webp|jpg|jpeg|png|avif|gif)$' || echo "::warning::bad file name $b (use <article-slug>.<ext>, lowercase)"
+            ls image/feature/"$n".* > /dev/null 2>&1 || echo "::warning::$n has no feature file (home falls back to the big file)"
+            ls image/card/"$n".* > /dev/null 2>&1 || echo "::warning::$n has no card file (cards fall back to the big file)"
+            s=$(stat -c %s "$f"); if [ "$s" -gt 307200 ]; then echo "::warning::hero $b is $((s / 1024)) KB (over 300 KB)"; fi
+          done
+          for f in image/feature/*.*; do
+            [ -f "$f" ] || continue
+            s=$(stat -c %s "$f"); if [ "$s" -gt 81920 ]; then echo "::warning::feature $(basename "$f") is $((s / 1024)) KB (over 80 KB)"; fi
+          done
+          for f in image/card/*.*; do
+            [ -f "$f" ] || continue
+            s=$(stat -c %s "$f"); if [ "$s" -gt 40960 ]; then echo "::warning::card $(basename "$f") is $((s / 1024)) KB (over 40 KB)"; fi
           done
           mb=$(du -sm image | cut -f1)
           echo "image/ = ${mb} MB (GitHub Pages limit is about 1000 MB)"
