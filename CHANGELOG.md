@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2.1 - folders exist from the start
+- `image/feature/` and `image/card/` come with a README.txt so the folders exist after the first upload (Git does not keep empty folders).
+Suggested commit message: `fix: create feature and card folders`
+
 ## v1.2.0 - any file extension
 - Names may end in webp, jpg, jpeg, png, avif or gif. The workflow looks for the feature and card partner with any extension; hero warning limit is now 300 KB.
 Suggested commit message: `change: accept any image extension in the checks`
