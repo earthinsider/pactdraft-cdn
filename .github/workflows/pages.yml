@@ -30,10 +30,12 @@ jobs:
           done
           for f in image/feature/*.*; do
             [ -f "$f" ] || continue
+            [ "$(basename "$f")" = "README.txt" ] && continue
             s=$(stat -c %s "$f"); if [ "$s" -gt 81920 ]; then echo "::warning::feature $(basename "$f") is $((s / 1024)) KB (over 80 KB)"; fi
           done
           for f in image/card/*.*; do
             [ -f "$f" ] || continue
+            [ "$(basename "$f")" = "README.txt" ] && continue
             s=$(stat -c %s "$f"); if [ "$s" -gt 40960 ]; then echo "::warning::card $(basename "$f") is $((s / 1024)) KB (over 40 KB)"; fi
           done
           mb=$(du -sm image | cut -f1)
