@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.0 - one image per article
+- Back to one file per article. The workflow warns about bad names and files over 150 KB and prints the average size and how many more images fit before 700 MB.
+Suggested commit message: `change: one image per article, capacity report`
+
 ## v1.2.1 - folders exist from the start
 - `image/feature/` and `image/card/` come with a README.txt so the folders exist after the first upload (Git does not keep empty folders).
 Suggested commit message: `fix: create feature and card folders`
