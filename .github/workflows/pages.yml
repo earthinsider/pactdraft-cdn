@@ -18,28 +18,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check files and size
         run: |
-          mkdir -p image/feature image/card
+          mkdir -p image
+          n=0; total=0
           for f in image/*.*; do
             [ -f "$f" ] || continue
             b=$(basename "$f"); [ "$b" = "README.txt" ] && continue
-            n="${b%.*}"
             echo "$b" | grep -Eq '^[a-z0-9][a-z0-9-]*\.(webp|jpg|jpeg|png|avif|gif)$' || echo "::warning::bad file name $b (use <article-slug>.<ext>, lowercase)"
-            ls image/feature/"$n".* > /dev/null 2>&1 || echo "::warning::$n has no feature file (home falls back to the big file)"
-            ls image/card/"$n".* > /dev/null 2>&1 || echo "::warning::$n has no card file (cards fall back to the big file)"
-            s=$(stat -c %s "$f"); if [ "$s" -gt 307200 ]; then echo "::warning::hero $b is $((s / 1024)) KB (over 300 KB)"; fi
-          done
-          for f in image/feature/*.*; do
-            [ -f "$f" ] || continue
-            [ "$(basename "$f")" = "README.txt" ] && continue
-            s=$(stat -c %s "$f"); if [ "$s" -gt 81920 ]; then echo "::warning::feature $(basename "$f") is $((s / 1024)) KB (over 80 KB)"; fi
-          done
-          for f in image/card/*.*; do
-            [ -f "$f" ] || continue
-            [ "$(basename "$f")" = "README.txt" ] && continue
-            s=$(stat -c %s "$f"); if [ "$s" -gt 40960 ]; then echo "::warning::card $(basename "$f") is $((s / 1024)) KB (over 40 KB)"; fi
+            s=$(stat -c %s "$f"); n=$((n + 1)); total=$((total + s))
+            if [ "$s" -gt 153600 ]; then echo "::warning::$b is $((s / 1024)) KB (over 150 KB)"; fi
           done
           mb=$(du -sm image | cut -f1)
-          echo "image/ = ${mb} MB (GitHub Pages limit is about 1000 MB)"
+          if [ "$n" -gt 0 ]; then
+            avg=$((total / n / 1024)); [ "$avg" -lt 1 ] && avg=1
+            left=$(( (700 - mb) * 1024 / avg )); [ "$left" -lt 0 ] && left=0
+            echo "image/ = ${mb} MB, ${n} images, average ${avg} KB, room for about ${left} more before the 700 MB warning"
+          else
+            echo "image/ is empty"
+          fi
           if [ "$mb" -gt 900 ]; then echo "::error::over 900 MB: create pactdraft-cdn-2 now"; exit 1; fi
           if [ "$mb" -gt 700 ]; then echo "::warning::over 700 MB: prepare pactdraft-cdn-2"; fi
       - name: Prepare site folder
