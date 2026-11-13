@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.0 - feature and card made at deploy time
+- `scripts/make_variants.py` builds `image/feature/` (800x450) and `image/card/` (480x270) into the published site only; cached by the workflow; never fails the deploy. The size report counts the published size.
+Suggested commit message: `feat: build feature and card images at deploy time from the one upload`
+
 ## v1.3.0 - one image per article
 - Back to one file per article. The workflow warns about bad names and files over 150 KB and prints the average size and how many more images fit before 700 MB.
 Suggested commit message: `change: one image per article, capacity report`
