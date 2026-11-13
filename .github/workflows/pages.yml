@@ -2,7 +2,7 @@ name: Deploy CDN
 on:
   push:
     branches: [main]
-    paths: ['image/**', 'index.html', 'robots.txt']
+    paths: ['image/**', 'scripts/**', 'index.html', 'robots.txt', '.github/workflows/pages.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,9 +16,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Restore feature/card cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/variants
+          key: variants-${{ github.run_id }}
+          restore-keys: variants-
+      - name: Make feature and card files (not committed to git)
+        continue-on-error: true
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 scripts/make_variants.py
+      - name: Prepare site folder
+        run: |
+          mkdir -p _site/image
+          cp image/*.* _site/image/ 2>/dev/null || true
+          cp index.html robots.txt _site/
+          if [ -f CNAME ]; then cp CNAME _site/; fi
       - name: Check files and size
         run: |
-          mkdir -p image
           n=0; total=0
           for f in image/*.*; do
             [ -f "$f" ] || continue
@@ -27,21 +43,16 @@ jobs:
             s=$(stat -c %s "$f"); n=$((n + 1)); total=$((total + s))
             if [ "$s" -gt 153600 ]; then echo "::warning::$b is $((s / 1024)) KB (over 150 KB)"; fi
           done
-          mb=$(du -sm image | cut -f1)
+          mb=$(du -sm _site/image | cut -f1)
           if [ "$n" -gt 0 ]; then
-            avg=$((total / n / 1024)); [ "$avg" -lt 1 ] && avg=1
-            left=$(( (700 - mb) * 1024 / avg )); [ "$left" -lt 0 ] && left=0
-            echo "image/ = ${mb} MB, ${n} images, average ${avg} KB, room for about ${left} more before the 700 MB warning"
+            per=$(( $(du -sk _site/image | cut -f1) / n )); [ "$per" -lt 1 ] && per=1
+            left=$(( (700 - mb) * 1024 / per )); [ "$left" -lt 0 ] && left=0
+            echo "published image/ = ${mb} MB for ${n} articles (about ${per} KB each with feature and card). Room for about ${left} more before the 700 MB warning."
           else
             echo "image/ is empty"
           fi
-          if [ "$mb" -gt 900 ]; then echo "::error::over 900 MB: create pactdraft-cdn-2 now"; exit 1; fi
-          if [ "$mb" -gt 700 ]; then echo "::warning::over 700 MB: prepare pactdraft-cdn-2"; fi
-      - name: Prepare site folder
-        run: |
-          mkdir _site
-          cp -r image index.html robots.txt _site/
-          if [ -f CNAME ]; then cp CNAME _site/; fi
+          if [ "$mb" -gt 900 ]; then echo "::error::published size is over 900 MB: create pactdraft-cdn-2 now"; exit 1; fi
+          if [ "$mb" -gt 700 ]; then echo "::warning::published size is over 700 MB: prepare pactdraft-cdn-2"; fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
